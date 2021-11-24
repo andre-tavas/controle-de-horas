@@ -1,0 +1,96 @@
+const FILE_ID = '1Q44cjtLTMtwILseFul1pyzjISVD1gWnog7mM6_XxuVk'; // ID da planilha utilizada
+const DAYS_TO_LOOKUP = 5; // Quantidade de dias anteriores ao atual que serão importados
+
+  /**
+   * Retorna o nome das pessoas da organização
+   */
+function getNomes(){
+  // Ativa o arquivo utilizado
+  var spreadsheet = SpreadsheetApp.openById(FILE_ID);
+  spreadsheet.getSheetByName('Dados').getRange('A2').activate();
+  
+  // Armazena o nome dos membros
+  abas = spreadsheet.getSelection().getNextDataRange(SpreadsheetApp.Direction.DOWN).getValues();
+
+  return abas;
+};
+
+/**
+ * Armazena o workspace do toggl das pessoas na organização
+ */
+function getWorkspaces(){
+  // Ativa o arquivo utilizado
+  var spreadsheet = SpreadsheetApp.openById(FILE_ID);
+  spreadsheet.getSheetByName('Dados').getRange('B2').activate();
+
+  // Armazena o workspace dos membros
+  workspaces = spreadsheet.getSelection().getNextDataRange(SpreadsheetApp.Direction.DOWN).getValues();
+
+  return workspaces;
+};
+
+/**
+ * Armazena a API do toggl das pessoas na organização
+ */
+function getAPIs(){
+  // Ativa o arquivo utilizado
+  var spreadsheet = SpreadsheetApp.openById(FILE_ID);
+  spreadsheet.getSheetByName('Dados').getRange('C2').activate();
+
+  // Armazena a API dos membros
+  apis = spreadsheet.getSelection().getNextDataRange(SpreadsheetApp.Direction.DOWN).getValues();
+  
+  return apis;
+};
+
+/**
+ * Armazena o email das pessoas na organização
+ */
+function getEmails(){
+  // Ativa o arquivo utilizado
+  var spreadsheet = SpreadsheetApp.openById(FILE_ID);
+  spreadsheet.getSheetByName('Dados').getRange('D2').activate();
+
+  // Armazena o email dos membros
+  emails = spreadsheet.getSelection().getNextDataRange(SpreadsheetApp.Direction.DOWN).getValues();
+  
+  return emails;
+};
+
+/**
+ * Armazena a quantidade de dados de uma determinada coluna em uma
+ * sheet (aba) contando a partir de uma cell (célula)
+ */
+function getNumDados(cell,sheet){
+  // Ativa o arquivo e o intervalo a ser contato utilizado
+  var spreadsheet = SpreadsheetApp.openById(FILE_ID).getSheetByName(sheet);
+  spreadsheet.getRange(cell).activate();
+
+  // Armazena a quantidade
+  num = spreadsheet.getSelection().getNextDataRange(SpreadsheetApp.Direction.DOWN).getValues().length;
+
+  return num;
+};
+
+const getUrlLoop = (email, workspace) => {
+ const USER = email;
+ const WORKSPACE_ID = workspace;
+ 
+  // The URL needs a value for time lookup constraints
+  const date = new Date();
+  date.setDate(date.getDate() - DAYS_TO_LOOKUP);
+  const dateString = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+  return `https://api.track.toggl.com/reports/api/v2/details?user_agent=${USER}&workspace_id=${WORKSPACE_ID}&display_hours=decimal&since=${dateString}`;
+};
+
+const writeRowArrToSheet_1 = (arr,aba) => {
+ const sheet = SpreadsheetApp.openById('1Q44cjtLTMtwILseFul1pyzjISVD1gWnog7mM6_XxuVk').getSheetByName(aba);
+ // getting our headers
+ const heads = sheet.getDataRange().offset(0, 0, 1).getValues()[0];
+ // convert object data into a 2d array
+ const tr = arr.map((row) => heads.map((key) => row[String(key)] || ""));
+ // write result
+ sheet
+ .getRange(sheet.getLastRow() + 1, 1, tr.length, tr[0].length)
+ .setValues(tr);
+};
