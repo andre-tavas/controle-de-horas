@@ -1,0 +1,22 @@
+function CriaAbas() {
+  /**
+   * Cria as abas para cada membro da organização com base na aba "Dados"
+   */
+
+  // Ativa a aba Dados
+  var spreadsheet = SpreadsheetApp.getActive();
+  spreadsheet.getSheetByName('Dados').activate();
+
+  // Ativa a primeira célula que contém dado
+  spreadsheet.getRange('A2').activate();
+
+  // Armazena o nome de todas as pessoas e quantidade de nomes
+  nomes = spreadsheet.getSelection().getNextDataRange(SpreadsheetApp.Direction.DOWN).activate().getValues();
+  numNomes = spreadsheet.getSelection().getActiveRange().getValues().length;
+
+  // Cria todas as abas
+  for(i = 0; i < numNomes; i = i + 1){
+    spreadsheet.insertSheet();
+    spreadsheet.getActiveSheet().setName(nomes[i]);
+  }
+};
