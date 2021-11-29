@@ -1,9 +1,12 @@
 const FILE_ID = '1Q44cjtLTMtwILseFul1pyzjISVD1gWnog7mM6_XxuVk'; // ID da planilha utilizada
 const DAYS_TO_LOOKUP = 5; // Quantidade de dias anteriores ao atual que serão importados
-
-  /**
-   * Retorna o nome das pessoas da organização
-   */
+const IGNORE_FIELDS = ["id","pid",'end',"tid","uid","updated","use_stop",
+                       "client","project_color","project_hex_color","task",
+                       "billable","is_billable","cur","tags"]; // Campos do relatorio do toggl a serem ignorados
+                       
+/**
+ * Retorna o nome das pessoas da organização
+ */
 function getNomes(){
   // Ativa o arquivo utilizado
   var spreadsheet = SpreadsheetApp.openById(FILE_ID);
@@ -72,25 +75,93 @@ function getNumDados(cell,sheet){
   return num;
 };
 
+/**
+ * Retorna a URL que será feita a requisicao com base no email e workspace do toggl
+ */
 const getUrlLoop = (email, workspace) => {
  const USER = email;
  const WORKSPACE_ID = workspace;
  
-  // The URL needs a value for time lookup constraints
+  // A URL precisa de uma data a partir da qual será feito a requisicao dos dados
   const date = new Date();
   date.setDate(date.getDate() - DAYS_TO_LOOKUP);
   const dateString = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
   return `https://api.track.toggl.com/reports/api/v2/details?user_agent=${USER}&workspace_id=${WORKSPACE_ID}&display_hours=decimal&since=${dateString}`;
 };
 
+/**
+ * 
+ */
 const writeRowArrToSheet_1 = (arr,aba) => {
- const sheet = SpreadsheetApp.openById('1Q44cjtLTMtwILseFul1pyzjISVD1gWnog7mM6_XxuVk').getSheetByName(aba);
- // getting our headers
+ const sheet = SpreadsheetApp.openById(FILE_ID).getSheetByName(aba);
+
+ // Pega os cabecalhos
  const heads = sheet.getDataRange().offset(0, 0, 1).getValues()[0];
- // convert object data into a 2d array
+ 
+ // Converte o objeto em um array de duas dimensões
  const tr = arr.map((row) => heads.map((key) => row[String(key)] || ""));
- // write result
+ 
+ // Escreve o resultado na aba
  sheet
- .getRange(sheet.getLastRow() + 1, 1, tr.length, tr[0].length)
- .setValues(tr);
+      .getRange(sheet.getLastRow() + 1, 1, tr.length, tr[0].length)
+      .setValues(tr);
+};
+
+/**
+ * Funcao que registra os dados de todos os membros da organizacao na planilha
+ */
+function fetchFromTGGL_all() {
+  var abas = getNomes();
+  var workspaces = getWorkspaces();
+  var apis = getAPIs();
+  var emails = getEmails();
+  var numLoops = getNumDados('A2','Dados');
+  var spreadsheet = SpreadsheetApp.openById('1Q44cjtLTMtwILseFul1pyzjISVD1gWnog7mM6_XxuVk');
+
+  var loop = 0;
+  // Registra os dados de todos os membros da organização
+  for(loop=0; loop<numLoops; loop = loop+1){
+    // Abre a aba na qual será registrado
+    var sheet = spreadsheet.getSheetByName(abas[loop]);
+    
+    // Armazena os dados necessarios do membro para comunicar com api
+    var api = apis[loop];
+    var blob_string = `${api}:api_token`;
+    var enconded_header = Utilities.base64Encode(blob_string);
+
+    // Fetch dos dados do Toggl
+    var response = UrlFetchApp.fetch(getUrlLoop(emails[loop],workspaces[loop]), {
+    headers: { Authorization: enconded_header },
+    });
+
+    // Resposta das entradas do toggl no formato .data
+    const dataArr = JSON.parse(response.getContentText()).data;
+    console.log(JSON.parse(response.getContentText()).data)
+
+    // Transforma payload da api em dados que serao usados
+    const parsedResponse = dataArr.map(parseTogglDataRowForInvoice);
+
+    // Log para identificar erros em usuarios especificos
+    Logger.log(abas[loop]);
+
+    // Quando nao ha registros de atividade no toggl no periodo resquisitado
+    // retorna erro
+    try{
+      // Define o cabecalho das colunas a partir das chaves do objeto
+      const row = parsedResponse[0];
+      Object.keys(row).forEach((key, i) => {
+      const range = sheet.getRange(1, i + 1, 1, 1);
+      range.setValue(key);
+      });
+
+      // Registra os dados nas linhas da planilha
+      writeRowArrToSheet_1(parsedResponse,abas[loop]);
+
+      //Remove os dados que estão duplicados
+      sheet.getRange('A1:E').removeDuplicates();
+    } catch(e){
+      // Logs an ERROR message.
+      console.error('fetchFromTGGL_all() yielded an error: ' + e);
+    }
+  }
 };
