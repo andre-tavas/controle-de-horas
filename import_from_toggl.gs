@@ -29,6 +29,7 @@ function fetchFromTGGL(sheet, user_info, user_num) {
   console.log(user_info.nomes[user_num])
 
   // Fetch dos dados do toggl para pegar o numero de paginas
+  console.log(getUrl(email,workspace,1));
   var response = UrlFetchApp.fetch(
     getUrl(email,workspace,1), {
       headers: { Authorization: toEcodedHeader(api) },
