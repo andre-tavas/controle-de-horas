@@ -318,8 +318,8 @@ function getUnique(lista){
   for(var i=0; i < lista.length; i++){
     var sublist = lista[i].split(", ");
     for(var j = 0; j < sublist.length; j++){
-      if(sublist[j] != '' && ! unique_values.includes(sublist[j])){
-        unique_values = unique_values.concat(sublist[j]);
+      if(sublist[j] != '' && ! unique_values.includes(sublist[j].trim())){
+        unique_values = unique_values.concat(sublist[j].trim());
       }
     }
   }
@@ -394,3 +394,6 @@ function updateFunctions(){
   abaControle.getRange('D5').activate().setFormula('=IFERROR(INDEX(QUERY(\''+BASE_DE_DADOS+'\'!$A$2:$H;\"SELECT sum (D) where month(C)=\"&MONTH(D$4)-1&\" and E = \'\"&$C5&\"\'\");2;1);0)')
   
 }
+
+
+
